@@ -2,10 +2,10 @@
 from collections import defaultdict
 from tqdm import tqdm
 import torch
-from datasets import load_dataset
-from transformer_lens.utils import tokenize_and_concatenate
-from transformers import AutoTokenizer
-from sae_lens.load_model import load_model
+# from datasets import load_dataset
+# from transformer_lens.utils import tokenize_and_concatenate
+# from transformers import AutoTokenizer
+# from sae_lens.load_model import load_model
 
 
 class FeatureStatistics():
@@ -214,55 +214,55 @@ class FeatureStatistics():
     
     
 # %%
-if __name__ == "__main__":
-    from sae_lens import SAE
-    from meta_saes.sae import BatchTopKSAE, load_gemma_sae, load_wandb_sae, load_feature_splitting_saes
+# if __name__ == "__main__":
+#     from sae_lens import SAE
+#     from meta_saes.sae import BatchTopKSAE, load_gemma_sae, load_wandb_sae, load_feature_splitting_saes
 
-    model = load_model("HookedTransformer", "gpt2-small", device="cuda")
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
+#     model = load_model("HookedTransformer", "gpt2-small", device="cuda")
+#     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     
-    dataset = load_dataset(
-        path="NeelNanda/pile-10k",
-        split="train",
-        streaming=False,
-    )
-    token_dataset = tokenize_and_concatenate(
-        dataset=dataset,  # type: ignore
-        tokenizer=tokenizer,  # type: ignore
-        streaming=False,
-        max_length=128,
-        add_bos_token=True,
-    )
+#     dataset = load_dataset(
+#         path="NeelNanda/pile-10k",
+#         split="train",
+#         streaming=False,
+#     )
+#     token_dataset = tokenize_and_concatenate(
+#         dataset=dataset,  # type: ignore
+#         tokenizer=tokenizer,  # type: ignore
+#         streaming=False,
+#         max_length=128,
+#         add_bos_token=True,
+#     )
 
-    _, base_sae, _ = load_feature_splitting_saes(device="cuda")
+#     _, base_sae, _ = load_feature_splitting_saes(device="cuda")
     
-    base_sae = base_sae[6]
-    dataset = torch.cat([token_dataset[i]["tokens"].unsqueeze(0) for i in range(dataset.shape[0])], dim=0)
-    print(dataset.shape)
+#     base_sae = base_sae[6]
+#     dataset = torch.cat([token_dataset[i]["tokens"].unsqueeze(0) for i in range(dataset.shape[0])], dim=0)
+#     print(dataset.shape)
 
-    meta_sae, cfg = load_wandb_sae("mats-sprint/gpt2-feature-splitting-saes/gpt2-small_blocks.8.hook_resid_pre_2304_topk_4_0.001_2000:v0", BatchTopKSAE)
-    stats = FeatureStatistics(base_sae)
+#     meta_sae, cfg = load_wandb_sae("mats-sprint/gpt2-feature-splitting-saes/gpt2-small_blocks.8.hook_resid_pre_2304_topk_4_0.001_2000:v0", BatchTopKSAE)
+#     stats = FeatureStatistics(base_sae)
 
- #%%   
+#  #%%   
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    stats.process_activating_examples(base_sae, model, dataset, batch_size=32)
-    stats.save("feature_stats_gpt2.pth")
+#     stats.process_activating_examples(base_sae, model, dataset, batch_size=32)
+#     stats.save("feature_stats_gpt2.pth")
 
-    stats = FeatureStatistics.load("feature_stats_gpt2.pth", base_sae)
+#     stats = FeatureStatistics.load("feature_stats_gpt2.pth", base_sae)
 
-    stats.process_clusters(base_sae, meta_sae, threshold=0.153)
-    stats.save("feature_stats_gpt2.pth")
+#     stats.process_clusters(base_sae, meta_sae, threshold=0.153)
+#     stats.save("feature_stats_gpt2.pth")
 
-    stats.calculate_token_and_word_counts(model, dataset)
-    stats.save("feature_stats_gpt2.pth")
+#     stats.calculate_token_and_word_counts(model, dataset)
+#     stats.save("feature_stats_gpt2.pth")
 
-    stats.calculate_top_boosted_logits(base_sae, model)
-    stats.save("feature_stats_gpt2.pth")
+#     stats.calculate_top_boosted_logits(base_sae, model)
+#     stats.save("feature_stats_gpt2.pth")
 
-    stats.calculate_meta_top_boosted_logits(meta_sae, model)
-    stats.save("feature_stats_gpt2.pth")
+#     stats.calculate_meta_top_boosted_logits(meta_sae, model)
+#     stats.save("feature_stats_gpt2.pth")
 
 
 
