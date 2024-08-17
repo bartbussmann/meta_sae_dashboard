@@ -139,10 +139,13 @@ def format_example(example, tokenizer):
 
 def meta_feature_button_callback(meta_feature_idx):
     st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
-    st.rerun()
+    st.session_state.page = "Meta Feature Explorer"
+    st.session_state.meta_feature_idx = meta_feature_idx
 
 def feature_button_callback(feature_idx):
     st._set_query_params(page="Feature Explorer", feature=feature_idx)
+    st.session_state.page = "Feature Explorer"
+    st.session_state.feature_idx = feature_idx
     st.rerun()
 
 def main():
