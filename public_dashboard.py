@@ -17,21 +17,24 @@ def load_tokenizer_and_dataset(dataset="NeelNanda/pile-10k", context_size=128, p
 
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     
-    dataset = load_dataset(
-        path="NeelNanda/pile-10k",
-        split="train",
-        streaming=False,
-    )
-    token_dataset = tokenize_and_concatenate(
-        dataset=dataset,  # type: ignore
-        tokenizer=tokenizer,  # type: ignore
-        streaming=False,
-        max_length=128,
-        add_bos_token=True,
-    )
+    # dataset = load_dataset(
+    #     path="NeelNanda/pile-10k",
+    #     split="train",
+    #     streaming=False,
+    # )
+    # token_dataset = tokenize_and_concatenate(
+    #     dataset=dataset,  # type: ignore
+    #     tokenizer=tokenizer,  # type: ignore
+    #     streaming=False,
+    #     max_length=128,
+    #     add_bos_token=True,
+    # )
 
-    dataset = torch.cat([token_dataset[i]["tokens"].unsqueeze(0) for i in range(dataset.shape[0])], dim=0)
-    print(dataset.shape)
+    # dataset = torch.cat([token_dataset[i]["tokens"].unsqueeze(0) for i in range(dataset.shape[0])], dim=0)
+    # print(dataset.shape)
+
+    # torch.save(dataset, "dataset.pth")
+    dataset = torch.load("dataset.pth")
 
     return tokenizer, dataset
 
