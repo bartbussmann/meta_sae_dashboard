@@ -1,0 +1,11 @@
+datasets==2.20.0
+meta_saes==0.1
+numpy==2.0.1
+openai==1.41.0
+plotly==5.23.0
+sae_lens==3.17.0
+streamlit==1.37.0
+torch==2.2.1
+tqdm==4.66.4
+transformer_lens==2.4.0
+transformers==4.43.3
