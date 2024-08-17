@@ -146,7 +146,6 @@ def feature_button_callback(feature_idx):
     st._set_query_params(page="Feature Explorer", feature=feature_idx)
     st.session_state.page = "Feature Explorer"
     st.session_state.feature_idx = feature_idx
-    st.rerun()
 
 def main():
     st.title("Feature Explorer Dashboard")
