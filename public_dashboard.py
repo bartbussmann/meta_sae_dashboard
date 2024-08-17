@@ -5,37 +5,15 @@ import html
 from auto_interp import AutoInterpreter
 import plotly.graph_objects as go
 import numpy as np
-import torch
 from datasets import load_dataset
 from transformer_lens.utils import tokenize_and_concatenate
 from transformers import AutoTokenizer
 
-
-# Load the model and SAE
+# Load the tokenizer and dataset
 @st.cache_resource
 def load_tokenizer_and_dataset(dataset="NeelNanda/pile-10k", context_size=128, prepend_bos=True):
-
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    
-    # dataset = load_dataset(
-    #     path="NeelNanda/pile-10k",
-    #     split="train",
-    #     streaming=False,
-    # )
-    # token_dataset = tokenize_and_concatenate(
-    #     dataset=dataset,  # type: ignore
-    #     tokenizer=tokenizer,  # type: ignore
-    #     streaming=False,
-    #     max_length=128,
-    #     add_bos_token=True,
-    # )
-
-    # dataset = torch.cat([token_dataset[i]["tokens"].unsqueeze(0) for i in range(dataset.shape[0])], dim=0)
-    # print(dataset.shape)
-
-    # torch.save(dataset, "dataset.pth")
     dataset = torch.load("dataset.pth")
-
     return tokenizer, dataset
 
 # Load the FeatureStatistics object
@@ -52,6 +30,16 @@ def load_interpreter(_stats, _tokenizer, _dataset):
     except FileNotFoundError:
         pass
     return interpreter
+
+def meta_feature_button_callback(meta_feature_idx):
+    st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
+    st.session_state.page = "Meta Feature Explorer"
+    st.session_state.meta_feature_idx = meta_feature_idx
+
+def feature_button_callback(feature_idx):
+    st._set_query_params(page="Feature Explorer", feature=feature_idx)
+    st.session_state.page = "Feature Explorer"
+    st.session_state.feature_idx = feature_idx
 
 
 def create_radial_tree_plot(feature_idx, stats, interpreter):
@@ -137,16 +125,6 @@ def format_example(example, tokenizer):
     
     return formatted_context
 
-def meta_feature_button_callback(meta_feature_idx):
-    st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
-    st.session_state.page = "Meta Feature Explorer"
-    st.session_state.meta_feature_idx = meta_feature_idx
-
-def feature_button_callback(feature_idx):
-    st._set_query_params(page="Feature Explorer", feature=feature_idx)
-    st.session_state.page = "Feature Explorer"
-    st.session_state.feature_idx = feature_idx
-
 def main():
     st.title("Feature Explorer Dashboard")
 
@@ -165,13 +143,9 @@ def main():
         st.session_state.feature_idx = feature_idx
 
     # Load everything
-    # model, sae, dataset = load_model_and_sae_and_data()
     tokenizer, dataset = load_tokenizer_and_dataset()
-    print("Loaded tokenizer and dataset")
     stats = load_feature_statistics("feature_stats_gpt2.pth")
-    print("Loaded feature statistics")
     interpreter = load_interpreter(stats, tokenizer, dataset)
-    print("Loaded interpreter")
 
     # Sidebar for navigation
     st.sidebar.radio("Choose a page", ["Feature Explorer", "Meta Feature Explorer"], key="page", index=["Feature Explorer", "Meta Feature Explorer"].index(st.session_state.page))
@@ -186,31 +160,12 @@ def main():
             st._set_query_params(page="Feature Explorer", feature=feature_idx)
             st.rerun()
 
-        with st.spinner("Generating description..."):
-            feature_description = interpreter.interpret_feature(st.session_state.feature_idx)
-
-            
-        st.subheader(f"Feature {st.session_state.feature_idx}: {feature_description}")
-                
-        # Display top words and tokens
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.write("## Top Words:")
-            st.write(", ".join(list(stats.feature_word_count[st.session_state.feature_idx].keys())[:10]))
-        with col2:
-            st.write("## Top Tokens:")
-            st.write(", ".join(list(stats.feature_token_count[st.session_state.feature_idx].keys())[:10]))
-        with col3:
-            st.write("## Top Boosted Logits:")
-            top_logits = stats.top_boosted_logits.get(st.session_state.feature_idx, [])
-            st.write(", ".join([f"{token}" for token, value in top_logits[:10]]))
-        
-        # Display top examples
-        st.write("## Top Examples:")
-        top_examples = stats.get_top_examples(st.session_state.feature_idx, tokenizer, dataset, top_k=10)
-        for example in top_examples:
-            st.markdown(format_example(example, tokenizer), unsafe_allow_html=True)
-            st.markdown("", unsafe_allow_html=True)
+        # Embed Neuronpedia iframe
+        st.components.v1.iframe(
+            f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{st.session_state.feature_idx}?embed=true&embedexplanation=true&embedplots=true",
+            height=1200,
+            scrolling=False
+        )
 
         # Display associated meta features (sorted by activation)
         st.write("## Associated Meta Features:")
@@ -225,7 +180,7 @@ def main():
         st.write("## Feature Relationship Graph")
         with st.spinner("Generating graph..."):
             fig = create_radial_tree_plot(st.session_state.feature_idx, stats, interpreter)
-        st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
 
     elif st.session_state.page == "Meta Feature Explorer":
         st.header("Meta Feature Explorer")
@@ -250,40 +205,22 @@ def main():
             
             st.write(f"Number of features in this meta feature: {len(features)}")
             
-            # Display top boosted logits for the meta-feature
-            st.write("#### Top Boosted Logits for Meta Feature:")
-            meta_top_logits = stats.meta_feature_top_boosted_logits.get(st.session_state.meta_feature_idx, [])
-            st.write(", ".join([f"{token}" for token, value in meta_top_logits[:10]]))
-            
             top_k = 5
             
             for feature_idx, activation in features[:top_k]:
-                feature_description = interpreter.interpret_feature(feature_idx)
-                st.write(f"## Feature {feature_idx}: {feature_description} (activation: {activation:.4f}):")
+                # feature_description = interpreter.interpret_feature(feature_idx)
+                # st.write(f"## Feature {feature_idx}: {feature_description} (activation: {activation:.4f}):")
                 st.button(f"Explore Feature {feature_idx}", 
                           key=f"feature_{feature_idx}", 
                           on_click=feature_button_callback, 
                           args=(feature_idx,))
                 
-                # Display top words and tokens
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.write("### Top Words:")
-                    st.write(", ".join(list(stats.feature_word_count[feature_idx].keys())[:5]))
-                with col2:
-                    st.write("### Top Tokens:")
-                    st.write(", ".join(list(stats.feature_token_count[feature_idx].keys())[:5]))
-                with col3:
-                    st.write("### Top Boosted Logits:")
-                    top_logits = stats.top_boosted_logits.get(feature_idx, [])
-                    st.write(", ".join([f"{token}" for token, value in top_logits[:5]]))
-                
-                # Display top examples
-                st.write("### Top Examples:")
-                top_examples = stats.get_top_examples(feature_idx, tokenizer, dataset, top_k=5)
-                for example in top_examples:
-                    st.markdown(format_example(example, tokenizer), unsafe_allow_html=True)
-                    st.markdown("", unsafe_allow_html=True)
+                # Embed Neuronpedia iframe for each feature
+                st.components.v1.iframe(
+                    f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{feature_idx}?embed=true&embedexplanation=true&embedplots=true",
+                    height=900,
+                    scrolling=False
+                )
                 
                 st.markdown("", unsafe_allow_html=True)
 
