@@ -1,5 +1,4 @@
 datasets==2.20.0
-meta_saes==0.1
 numpy==2.0.1
 openai==1.41.0
 plotly==5.23.0

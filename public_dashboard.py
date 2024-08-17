@@ -5,7 +5,6 @@ import html
 from auto_interp import AutoInterpreter
 import plotly.graph_objects as go
 import numpy as np
-from meta_saes.sae import load_gemma_sae
 import torch
 from datasets import load_dataset
 from transformer_lens.utils import tokenize_and_concatenate
