@@ -9,7 +9,6 @@ import torch
 from datasets import load_dataset
 from transformer_lens.utils import tokenize_and_concatenate
 from transformers import AutoTokenizer
-from sae_lens.load_model import load_model
 
 
 # Load the model and SAE
