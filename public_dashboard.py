@@ -138,25 +138,29 @@ def format_example(example, tokenizer):
     return formatted_context
 
 def meta_feature_button_callback(meta_feature_idx):
-    st.session_state.page = "Meta Feature Explorer"
-    st.session_state.meta_feature_idx = meta_feature_idx
+    st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
     st.rerun()
 
 def feature_button_callback(feature_idx):
-    st.session_state.page = "Feature Explorer"
-    st.session_state.feature_idx = feature_idx
+    st._set_query_params(page="Feature Explorer", feature=feature_idx)
     st.rerun()
 
 def main():
     st.title("Feature Explorer Dashboard")
 
+    # Get query parameters from URL
+    query_params = st._get_query_params()
+    page = query_params.get("page", ["Feature Explorer"])[0]
+    feature_idx = int(query_params.get("feature", [0])[0])
+    meta_feature_idx = int(query_params.get("meta_feature", [0])[0])
+
     # Initialize session state
     if 'page' not in st.session_state:
-        st.session_state.page = "Feature Explorer"
+        st.session_state.page = page
     if 'meta_feature_idx' not in st.session_state:
-        st.session_state.meta_feature_idx = 0
+        st.session_state.meta_feature_idx = meta_feature_idx
     if 'feature_idx' not in st.session_state:
-        st.session_state.feature_idx = 0
+        st.session_state.feature_idx = feature_idx
 
     # Load everything
     # model, sae, dataset = load_model_and_sae_and_data()
@@ -168,7 +172,7 @@ def main():
     print("Loaded interpreter")
 
     # Sidebar for navigation
-    st.sidebar.radio("Choose a page", ["Feature Explorer", "Meta Feature Explorer"], key="page")
+    st.sidebar.radio("Choose a page", ["Feature Explorer", "Meta Feature Explorer"], key="page", index=["Feature Explorer", "Meta Feature Explorer"].index(st.session_state.page))
 
     if st.session_state.page == "Feature Explorer":
         st.header("Feature Explorer")
@@ -177,6 +181,7 @@ def main():
         
         if st.button("Explore Feature") or feature_idx != st.session_state.feature_idx:
             st.session_state.feature_idx = feature_idx
+            st._set_query_params(page="Feature Explorer", feature=feature_idx)
             st.rerun()
 
         with st.spinner("Generating description..."):
@@ -227,6 +232,7 @@ def main():
         
         if st.button("Explore Meta Feature") or meta_feature_idx != st.session_state.meta_feature_idx:
             st.session_state.meta_feature_idx = meta_feature_idx
+            st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
             st.rerun()
             
         # Compute interpretation for the current meta-feature
