@@ -18,7 +18,7 @@ class FeatureStatistics():
         self.top_boosted_logits = {}
         self.meta_feature_top_boosted_logits = {}
         self.n_features = sae.W_dec.shape[0] if sae is not None else 49152
-        self.min_activation_values = torch.zeros(self.n_features, device='cuda')
+        self.min_activation_values = torch.zeros(self.n_features, device='cpu')
 
     @torch.no_grad()
     def process_activating_examples(self, sae, model, dataset, batch_size=2):
