@@ -161,8 +161,11 @@ def main():
     # Load everything
     # model, sae, dataset = load_model_and_sae_and_data()
     tokenizer, dataset = load_tokenizer_and_dataset()
+    print("Loaded tokenizer and dataset")
     stats = load_feature_statistics("feature_stats_gpt2.pth")
+    print("Loaded feature statistics")
     interpreter = load_interpreter(stats, tokenizer, dataset)
+    print("Loaded interpreter")
 
     # Sidebar for navigation
     st.sidebar.radio("Choose a page", ["Feature Explorer", "Meta Feature Explorer"], key="page")
