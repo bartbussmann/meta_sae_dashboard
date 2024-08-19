@@ -2,6 +2,7 @@
 from openai import OpenAI
 import json
 import os
+import requests
 
 # In order to use the OpenAI API, you need to set the OPENAI_API_KEY environment variable.
 # You can do this by running `export OPENAI_API_KEY="your_api_key"` in your terminal.
@@ -12,11 +13,12 @@ class AutoInterpreter:
         self.tokenizer = tokenizer
         self.dataset = dataset
         self.openai_key = os.environ["OPENAI_API_KEY"]
+        self.neuronpedia_api_key = os.environ["NEURONPEDIA_API_KEY"]
         self.feature_descriptions = {}
         self.meta_feature_descriptions = {}
 
     def get_feature_summary(self, feature_idx):
-        top_words = ", ".join(list(self.stats.feature_word_count[feature_idx].keys())[:5])
+        # top_words = ", ".join(list(self.stats.feature_word_count[feature_idx].keys())[:5])
         top_tokens = ", ".join(list(self.stats.feature_token_count[feature_idx].keys())[:5])
         top_examples = self.stats.get_top_examples(feature_idx, self.tokenizer, self.dataset, top_k=10, pre_context=2, post_context=1)
         examples_text = "\n".join([ex['context_text'] for ex in top_examples])
@@ -30,8 +32,27 @@ class AutoInterpreter:
         summary = ""
         for feature_idx, activation in top_features:
             feature_summary = self.get_feature_summary(feature_idx)
-            summary += f"Feature {feature_idx} (activation: {activation:.4f}):\n{feature_summary}\n\n"
+            neuronpedia_explanation = self.get_neuronpedia_explanation(feature_idx)
+            summary += f"Feature {feature_idx} ({neuronpedia_explanation}):\n{feature_summary}\n\n"
         return summary
+
+    def get_neuronpedia_explanation(self, feature_idx, model_id="gpt2-small", layer="8-res_fs49152-jb"):
+        url = f"https://www.neuronpedia.org/api/feature/{model_id}/{layer}/{feature_idx}"
+        headers = {
+            "X-Api-Key": self.neuronpedia_api_key
+        }
+        
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            feature_data = response.json()
+            explanation = feature_data.get("explanations", "_")
+            if explanation != "_":
+                explanation = explanation[0]["description"]
+            return explanation
+        
+        return f"Failed to fetch explanation for feature {feature_idx}"
+
 
     def get_chatgpt_description(self, prompt):
         client = OpenAI(api_key=self.openai_key)

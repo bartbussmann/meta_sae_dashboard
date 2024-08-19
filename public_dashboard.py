@@ -8,6 +8,8 @@ import numpy as np
 from datasets import load_dataset
 from transformer_lens.utils import tokenize_and_concatenate
 from transformers import AutoTokenizer
+import requests
+
 
 # Load the tokenizer and dataset
 @st.cache_resource
@@ -42,7 +44,7 @@ def feature_button_callback(feature_idx):
     st.session_state.feature_idx = feature_idx
 
 
-def create_radial_tree_plot(feature_idx, stats, interpreter):
+def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-small", layer="8-res_fs49152-jb"):
     # Create nodes and edges
     nodes = [f"F{feature_idx}"]
     node_colors = ['rgba(255,0,0,0.3)']  # More transparent red
@@ -50,12 +52,12 @@ def create_radial_tree_plot(feature_idx, stats, interpreter):
     edge_traces = []
     annotations = []
 
-    feature_desc = interpreter.interpret_feature(feature_idx)
+    feature_desc = interpreter.get_neuronpedia_explanation(feature_idx, model_id, layer)
     annotations.append(dict(x=0, y=0, xref="x", yref="y", text=feature_desc, showarrow=False, font=dict(size=12, color="red")))
 
     sorted_meta_features = sorted(stats.feature_to_clusters[feature_idx], key=lambda x: x[1], reverse=True)[:5]
     for i, (mf_idx, _) in enumerate(sorted_meta_features):
-        mf_desc = interpreter.interpret_meta_feature(mf_idx)
+        mf_desc = interpreter.interpret_meta_feature(mf_idx)  # Use AutoInterpreter for meta-features
         mf_node = f"MF{mf_idx}"
         nodes.append(mf_node)
         node_colors.append('rgba(0,0,255,0.3)')  # More transparent blue
@@ -69,7 +71,7 @@ def create_radial_tree_plot(feature_idx, stats, interpreter):
         top_features = sorted(stats.cluster_to_features[mf_idx], key=lambda x: x[1], reverse=True)[:5]
         for j, (f_idx, _) in enumerate(top_features):
             if f_idx != feature_idx:
-                f_desc = interpreter.interpret_feature(f_idx)
+                f_desc = interpreter.get_neuronpedia_explanation(f_idx, model_id, layer)
                 f_node = f"F{f_idx}_{i}"
                 nodes.append(f_node)
                 node_colors.append('rgba(0,255,0,0.3)')  # More transparent green
@@ -111,6 +113,7 @@ def create_radial_tree_plot(feature_idx, stats, interpreter):
                     ))
 
     return fig
+
 
 def format_example(example, tokenizer):
     context = html.escape(example['context_text'])
