@@ -200,8 +200,6 @@ def main():
             meta_feature_description = interpreter.interpret_meta_feature(st.session_state.meta_feature_idx)
         st.write(f"# Meta Feature {st.session_state.meta_feature_idx}: {meta_feature_description}")
 
-        
-        
         if st.session_state.meta_feature_idx not in stats.cluster_to_features:
             st.write(f"Meta Feature {st.session_state.meta_feature_idx} not found.")
         else:
@@ -210,11 +208,11 @@ def main():
             
             st.write(f"Number of features with this meta feature: {len(features)}")
             
-            top_k = 15
-            
-            for feature_idx, activation in features[:top_k]:
-                # feature_description = interpreter.interpret_feature(feature_idx)
-                # st.write(f"## Feature {feature_idx}: {feature_description} (activation: {activation:.4f}):")
+            # Initialize session state for number of features to show
+            if 'num_features_to_show' not in st.session_state:
+                st.session_state.num_features_to_show = 5
+
+            for feature_idx, activation in features[:st.session_state.num_features_to_show]:
                 st.button(f"Explore Feature {feature_idx}", 
                           key=f"feature_{feature_idx}", 
                           on_click=feature_button_callback, 
@@ -228,6 +226,11 @@ def main():
                 )
                 
                 st.markdown("", unsafe_allow_html=True)
+
+            # Add "Load More" button
+            if st.session_state.num_features_to_show < len(features) and st.button("Load More"):
+                st.session_state.num_features_to_show += 10
+                st.rerun()
 
 if __name__ == "__main__":
     main()
