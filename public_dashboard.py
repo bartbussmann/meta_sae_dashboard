@@ -199,6 +199,8 @@ def main():
         with st.spinner("Generating description..."):
             meta_feature_description = interpreter.interpret_meta_feature(st.session_state.meta_feature_idx)
         st.write(f"# Meta Feature {st.session_state.meta_feature_idx}: {meta_feature_description}")
+
+        
         
         if st.session_state.meta_feature_idx not in stats.cluster_to_features:
             st.write(f"Meta Feature {st.session_state.meta_feature_idx} not found.")
@@ -206,9 +208,9 @@ def main():
             features = stats.cluster_to_features[st.session_state.meta_feature_idx]
             features.sort(key=lambda x: x[1], reverse=True)
             
-            st.write(f"Number of features in this meta feature: {len(features)}")
+            st.write(f"Number of features with this meta feature: {len(features)}")
             
-            top_k = 5
+            top_k = 15
             
             for feature_idx, activation in features[:top_k]:
                 # feature_description = interpreter.interpret_feature(feature_idx)
