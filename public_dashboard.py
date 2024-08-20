@@ -10,6 +10,7 @@ from transformer_lens.utils import tokenize_and_concatenate
 from transformers import AutoTokenizer
 import requests
 import random
+import plotly.figure_factory as ff
 
 
 # Load the tokenizer and dataset
@@ -129,6 +130,19 @@ def format_example(example, tokenizer):
     
     return formatted_context
 
+def create_activation_histogram(activations, num_features):
+    fig = ff.create_distplot([activations], ['Activation'], bin_size=0.05, show_rug=False, show_curve=False)
+    fig.update_layout(
+        title=f"Meta-Feature Activation Distribution<br>Number of features: {num_features} (activation density: {(num_features/49152):.4f})",
+        xaxis_title="Activation Value",
+        yaxis_title="Density",
+        showlegend=False,
+        width=400,
+        height=350,
+        xaxis_range=[0.15, 1]
+    )
+    return fig
+
 def main():
     st.title("Feature Explorer Dashboard")
 
@@ -153,6 +167,16 @@ def main():
 
     # Sidebar for navigation
     st.sidebar.radio("Choose a page", ["Feature Explorer", "Meta Feature Explorer"], key="page", index=["Feature Explorer", "Meta Feature Explorer"].index(st.session_state.page))
+
+    # Add MetaSAE explanation to sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("About MetaSAEs")
+    st.sidebar.markdown("""
+    MetaSAEs are sparse autoencoders (SAEs) trained on the decoder directions of another SAE. 
+    They decompose SAE features into more interpretable components (meta-features), revealing deeper structures in the activation space.
+        
+    Explore the dashboard to see how MetaSAEs provide new insights into SAE features!
+    """)
 
     if st.session_state.page == "Feature Explorer":
         st.header("Feature Explorer")
@@ -192,7 +216,7 @@ def main():
                       on_click=meta_feature_button_callback, 
                       args=(meta_feature_idx,))
             
-        st.write("## Feature Relationship Graph")
+        st.write("## Related Features Graph")
         with st.spinner("Generating graph..."):
             fig = create_radial_tree_plot(st.session_state.feature_idx, stats, interpreter)
             st.plotly_chart(fig, use_container_width=True)
@@ -229,7 +253,13 @@ def main():
             features = stats.cluster_to_features[st.session_state.meta_feature_idx]
             features.sort(key=lambda x: x[1], reverse=True)
             
-            st.write(f"Number of features with this meta feature: {len(features)} (activation density: {(len(features)/49152):.4f})")
+            # st.write(f"Number of features with this meta feature: {len(features)} (activation density: {(len(features)/49152):.4f})")
+
+
+            # Create and display the activation histogram
+            activations = [activation for _, activation in features]
+            fig = create_activation_histogram(activations, len(features))
+            st.plotly_chart(fig, use_container_width=True)
 
             # Display top boosted logits for the meta-feature
             st.write("#### Top Boosted Logits for Meta Feature:")
