@@ -9,6 +9,7 @@ from datasets import load_dataset
 from transformer_lens.utils import tokenize_and_concatenate
 from transformers import AutoTokenizer
 import requests
+import random
 
 
 # Load the tokenizer and dataset
@@ -53,7 +54,7 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
     annotations = []
 
     feature_desc = interpreter.get_neuronpedia_explanation(feature_idx, model_id, layer)
-    annotations.append(dict(x=0, y=0, xref="x", yref="y", text=feature_desc, showarrow=False, font=dict(size=12, color="red")))
+    annotations.append(dict(x=0, y=0, xref="x", yref="y", text=feature_desc, showarrow=False, font=dict(size=14, color="red")))
 
     sorted_meta_features = sorted(stats.feature_to_clusters[feature_idx], key=lambda x: x[1], reverse=True)[:5]
     for i, (mf_idx, _) in enumerate(sorted_meta_features):
@@ -63,10 +64,10 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
         node_colors.append('rgba(0,0,255,0.3)')  # More transparent blue
         node_sizes.append(20)
 
-        angle = 2 * np.pi * i / 5
-        x, y = 0.5 * np.cos(angle), 0.5 * np.sin(angle)
+        angle = 2 * np.pi * i / 5 + 1
+        x, y =   0.5*np.cos(angle),  0.5*np.sin(angle)
         edge_traces.append(go.Scatter(x=[0, x], y=[0, y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.5)', width=1), hoverinfo='none'))
-        annotations.append(dict(x=x, y=y, xref="x", yref="y", text=mf_desc, showarrow=False, font=dict(size=10, color="blue")))
+        annotations.append(dict(x=x, y=y, xref="x", yref="y", text=mf_desc, showarrow=False, font=dict(size=12, color="blue")))
 
         top_features = sorted(stats.cluster_to_features[mf_idx], key=lambda x: x[1], reverse=True)[:5]
         for j, (f_idx, _) in enumerate(top_features):
@@ -78,9 +79,9 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
                 node_sizes.append(15)
 
                 sub_angle = angle + (j - 2) * 0.2
-                sub_x, sub_y = (0.8 + 0.05 * j) * np.cos(sub_angle), (0.8 + 0.05 * j) * np.sin(sub_angle)
+                sub_x, sub_y = 1.1*(0.8 + 0.05 * j) * np.cos(sub_angle), 1.1*(0.8 + 0.05 * j) * np.sin(sub_angle)
                 edge_traces.append(go.Scatter(x=[x, sub_x], y=[y, sub_y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.3)', width=1), hoverinfo='none'))
-                annotations.append(dict(x=sub_x, y=sub_y, xref="x", yref="y", text=f_desc, showarrow=False, font=dict(size=8, color="green")))
+                annotations.append(dict(x=sub_x, y=sub_y, xref="x", yref="y", text=f_desc, showarrow=False, font=dict(size=10, color="green")))
 
     # Create node trace
     node_trace = go.Scatter(
@@ -158,10 +159,21 @@ def main():
         
         feature_idx = st.number_input("Enter feature index:", min_value=0, max_value=stats.n_features-1, value=st.session_state.feature_idx)
         
-        if st.button("Explore Feature") or feature_idx != st.session_state.feature_idx:
-            st.session_state.feature_idx = feature_idx
-            st._set_query_params(page="Feature Explorer", feature=feature_idx)
-            st.rerun()
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Explore Feature", key="explore_feature_button"):
+                st.session_state.feature_idx = feature_idx
+                st._set_query_params(page="Feature Explorer", feature=feature_idx)
+                st.rerun()
+        
+        with col2:
+            if st.button("I'm Feeling Lucky", key="feature_lucky_button"):
+                feature_idx = random.randint(0, stats.n_features-1)
+                st.session_state.feature_idx = feature_idx
+                st._set_query_params(page="Feature Explorer", feature=feature_idx)
+                st.rerun()
+        
 
         # Embed Neuronpedia iframe
         st.components.v1.iframe(
@@ -190,11 +202,22 @@ def main():
         
         meta_feature_idx = st.number_input("Enter meta feature index:", min_value=0, value=st.session_state.meta_feature_idx)
         
-        if st.button("Explore Meta Feature") or meta_feature_idx != st.session_state.meta_feature_idx:
-            st.session_state.meta_feature_idx = meta_feature_idx
-            st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
-            st.rerun()
-            
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Explore Meta Feature", key="explore_meta_feature_button"):
+                st.session_state.meta_feature_idx = meta_feature_idx
+                st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
+                st.rerun()
+        
+        with col2:
+            if st.button("I'm Feeling Lucky", key="meta_feature_lucky_button"):
+                meta_feature_idx = random.choice(list(stats.cluster_to_features.keys()))
+                st.session_state.meta_feature_idx = meta_feature_idx
+                st._set_query_params(page="Meta Feature Explorer", meta_feature=meta_feature_idx)
+                st.rerun()
+
+
         # Compute interpretation for the current meta-feature
         with st.spinner("Generating description..."):
             meta_feature_description = interpreter.interpret_meta_feature(st.session_state.meta_feature_idx)
