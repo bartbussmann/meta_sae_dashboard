@@ -178,8 +178,8 @@ def main():
         # Embed Neuronpedia iframe
         st.components.v1.iframe(
             f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{st.session_state.feature_idx}?embed=true&embedexplanation=true&embedplots=true",
-            height=1200,
-            scrolling=False
+            height=600,
+            scrolling=True
         )
 
         # Display associated meta features (sorted by activation)
@@ -229,8 +229,14 @@ def main():
             features = stats.cluster_to_features[st.session_state.meta_feature_idx]
             features.sort(key=lambda x: x[1], reverse=True)
             
-            st.write(f"Number of features with this meta feature: {len(features)}")
-            
+            st.write(f"Number of features with this meta feature: {len(features)} (activation density: {(len(features)/49152):.4f})")
+
+            # Display top boosted logits for the meta-feature
+            st.write("#### Top Boosted Logits for Meta Feature:")
+            meta_top_logits = stats.meta_feature_top_boosted_logits.get(st.session_state.meta_feature_idx, [])
+            st.write(", ".join([f"{token}" for token, value in meta_top_logits[:10]]))
+
+            st.write("## Max activating features")
             # Initialize session state for number of features to show
             if 'num_features_to_show' not in st.session_state:
                 st.session_state.num_features_to_show = 5
@@ -243,9 +249,9 @@ def main():
                 
                 # Embed Neuronpedia iframe for each feature
                 st.components.v1.iframe(
-                    f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{feature_idx}?embed=true&embedexplanation=true&embedplots=true",
-                    height=900,
-                    scrolling=False
+                    f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{feature_idx}?embed=true&embedexplanation=true&embedplots=false",
+                    height=400,
+                    scrolling=True
                 )
                 
                 st.markdown("", unsafe_allow_html=True)
