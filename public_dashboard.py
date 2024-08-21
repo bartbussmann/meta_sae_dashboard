@@ -58,6 +58,8 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
     annotations.append(dict(x=0, y=0, xref="x", yref="y", text=feature_desc, showarrow=False, font=dict(size=14, color="red")))
 
     sorted_meta_features = sorted(stats.feature_to_clusters[feature_idx], key=lambda x: x[1], reverse=True)[:5]
+    top_features_dict = {}
+
     for i, (mf_idx, _) in enumerate(sorted_meta_features):
         mf_desc = interpreter.interpret_meta_feature(mf_idx)  # Use AutoInterpreter for meta-features
         mf_node = f"MF{mf_idx}"
@@ -71,6 +73,7 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
         annotations.append(dict(x=x, y=y, xref="x", yref="y", text=mf_desc, showarrow=False, font=dict(size=12, color="blue")))
 
         top_features = sorted(stats.cluster_to_features[mf_idx], key=lambda x: x[1], reverse=True)[:5]
+        top_features_dict[mf_idx] = top_features
         for j, (f_idx, _) in enumerate(top_features):
             if f_idx != feature_idx:
                 f_desc = interpreter.get_neuronpedia_explanation(f_idx, model_id, layer)
@@ -114,8 +117,7 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
                         plot_bgcolor='rgba(0,0,0,0)'
                     ))
 
-    return fig
-
+    return fig, sorted_meta_features, top_features_dict
 
 def format_example(example, tokenizer):
     context = html.escape(example['context_text'])
@@ -218,8 +220,23 @@ def main():
             
         st.write("## Related Features Graph")
         with st.spinner("Generating graph..."):
-            fig = create_radial_tree_plot(st.session_state.feature_idx, stats, interpreter)
+            fig, sorted_meta_features, top_features_dict = create_radial_tree_plot(st.session_state.feature_idx, stats, interpreter)
             st.plotly_chart(fig, use_container_width=True)
+
+
+        num_columns = len(sorted_meta_features)
+        columns = st.columns(num_columns)
+
+        for i, (mf_idx, _) in enumerate(sorted_meta_features):
+            with columns[i]:
+                st.write(f"**Meta Feature {mf_idx}**")
+                for f_idx, _ in top_features_dict[mf_idx]:
+                    if f_idx != st.session_state.feature_idx:
+                        f_desc = interpreter.get_neuronpedia_explanation(f_idx, "gpt2-small", "8-res_fs49152-jb")
+                        if st.button(f"F{f_idx}: {f_desc}", key=f"related_feature_{f_idx}"):
+                            st.session_state.feature_idx = f_idx
+                            st._set_query_params(page="Feature Explorer", feature=f_idx)
+                            st.rerun()
 
     elif st.session_state.page == "Meta Feature Explorer":
         st.header("Meta Feature Explorer")

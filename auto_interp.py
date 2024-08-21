@@ -14,7 +14,7 @@ class AutoInterpreter:
         self.dataset = dataset
         self.openai_key = os.environ["OPENAI_API_KEY"]
         self.neuronpedia_api_key = os.environ["NEURONPEDIA_API_KEY"]
-        self.feature_descriptions = {}
+        self.feature_descriptions = self.get_neuronpedia_explanations(model_id="gpt2-small", sae_id="8-res_fs49152-jb", api_key=self.neuronpedia_api_key)
         self.meta_feature_descriptions = {}
 
     def get_feature_summary(self, feature_idx):
@@ -22,7 +22,6 @@ class AutoInterpreter:
         top_tokens = ", ".join(list(self.stats.feature_token_count[feature_idx].keys())[:5])
         top_examples = self.stats.get_top_examples(feature_idx, self.tokenizer, self.dataset, top_k=10, pre_context=2, post_context=1)
         examples_text = "\n".join([ex['context_text'] for ex in top_examples])
-        print(examples_text)
         return f"Top tokens: {top_tokens}\nExamples:\n{examples_text}"
 
     def get_meta_feature_summary(self, meta_feature_idx):
@@ -37,6 +36,9 @@ class AutoInterpreter:
         return summary
 
     def get_neuronpedia_explanation(self, feature_idx, model_id="gpt2-small", layer="8-res_fs49152-jb"):
+        if feature_idx in self.feature_descriptions:
+            return self.feature_descriptions[feature_idx]
+        
         url = f"https://www.neuronpedia.org/api/feature/{model_id}/{layer}/{feature_idx}"
         headers = {
             "X-Api-Key": self.neuronpedia_api_key
@@ -52,6 +54,32 @@ class AutoInterpreter:
             return explanation
         
         return f"Failed to fetch explanation for feature {feature_idx}"
+    
+
+    def get_neuronpedia_explanations(self, model_id, sae_id, api_key):
+        url = "https://www.neuronpedia.org/api/explanation/export"
+        headers = {
+            "X-Api-Key": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "modelId": model_id,
+            "saeId": sae_id
+        }
+        
+        response = requests.post(url, headers=headers, json=payload)
+        all_explanations = {}
+        
+        if response.status_code == 200:
+            explanations = response.json().get("explanations", [])
+            for explanation in explanations:
+                all_explanations[int(explanation["index"])] = explanation["description"]
+            return all_explanations
+
+        else:
+            print(f"Failed to fetch explanations. Status code: {response.status_code}")
+            return {}
 
 
     def get_chatgpt_description(self, prompt):
