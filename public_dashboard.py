@@ -177,7 +177,9 @@ def main():
     MetaSAEs are sparse autoencoders (SAEs) trained on the decoder directions of another SAE. 
     They decompose SAE features into more interpretable components (meta-features), revealing deeper structures in the activation space.
         
-    Explore the dashboard to see how MetaSAEs provide new insights into SAE features!
+    This MetaSAE is trained on a 49152-feature SAE and has a dictionary size of 2304 meta-features.
+                        
+    It is trained with a BatchTopK of 4, such that on average every feature decomposes into 4 meta-features.
     """)
 
     if st.session_state.page == "Feature Explorer":
