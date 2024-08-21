@@ -55,7 +55,8 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
     annotations = []
 
     feature_desc = interpreter.get_neuronpedia_explanation(feature_idx, model_id, layer)
-    annotations.append(dict(x=0, y=0, xref="x", yref="y", text=feature_desc, showarrow=False, font=dict(size=14, color="red")))
+    feature_link = f"https://metasae.streamlit.app/?page=Feature+Explorer&feature={feature_idx}"
+    annotations.append(dict(x=0, y=0, xref="x", yref="y", text=f'<a href="{feature_link}" style="color: red;">{feature_desc}</a>', showarrow=False, font=dict(size=14, color="red")))
 
     sorted_meta_features = sorted(stats.feature_to_clusters[feature_idx], key=lambda x: x[1], reverse=True)[:5]
     top_features_dict = {}
@@ -70,7 +71,8 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
         angle = 2 * np.pi * i / 5 + 1
         x, y =   0.5*np.cos(angle),  0.5*np.sin(angle)
         edge_traces.append(go.Scatter(x=[0, x], y=[0, y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.5)', width=1), hoverinfo='none'))
-        annotations.append(dict(x=x, y=y, xref="x", yref="y", text=mf_desc, showarrow=False, font=dict(size=12, color="blue")))
+        mf_link = f"https://metasae.streamlit.app/?page=Meta+Feature+Explorer&meta_feature={mf_idx}"
+        annotations.append(dict(x=x, y=y, xref="x", yref="y", text=f'<a href="{mf_link}" style="color: blue;">{mf_desc}</a>', showarrow=False, font=dict(size=12, color="blue")))
 
         top_features = sorted(stats.cluster_to_features[mf_idx], key=lambda x: x[1], reverse=True)[:5]
         top_features_dict[mf_idx] = top_features
@@ -85,7 +87,8 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
                 sub_angle = angle + (j - 2) * 0.2
                 sub_x, sub_y = 1.1*(0.8 + 0.05 * j) * np.cos(sub_angle), 1.1*(0.8 + 0.05 * j) * np.sin(sub_angle)
                 edge_traces.append(go.Scatter(x=[x, sub_x], y=[y, sub_y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.3)', width=1), hoverinfo='none'))
-                annotations.append(dict(x=sub_x, y=sub_y, xref="x", yref="y", text=f_desc, showarrow=False, font=dict(size=10, color="green")))
+                f_link = f"https://metasae.streamlit.app/?page=Feature+Explorer&feature={f_idx}"
+                annotations.append(dict(x=sub_x, y=sub_y, xref="x", yref="y", text=f'<a href="{f_link}" style="color: green;">{f_desc}</a>', showarrow=False, font=dict(size=10, color="green")))
 
     # Create node trace
     node_trace = go.Scatter(
@@ -119,6 +122,7 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
 
     return fig, sorted_meta_features, top_features_dict
 
+
 def format_example(example, tokenizer):
     context = html.escape(example['context_text'])
     token = html.escape(tokenizer.decode(example['token']))
@@ -146,7 +150,7 @@ def create_activation_histogram(activations, num_features):
     return fig
 
 def main():
-    st.title("Feature Explorer Dashboard")
+    st.title("Meta SAE Dashboard")
 
     # Get query parameters from URL
     query_params = st._get_query_params()
@@ -231,16 +235,16 @@ def main():
         num_columns = len(sorted_meta_features)
         columns = st.columns(num_columns)
 
-        for i, (mf_idx, _) in enumerate(sorted_meta_features):
-            with columns[i]:
-                st.write(f"**Meta Feature {mf_idx}**")
-                for f_idx, _ in top_features_dict[mf_idx]:
-                    if f_idx != st.session_state.feature_idx:
-                        f_desc = interpreter.get_neuronpedia_explanation(f_idx, "gpt2-small", "8-res_fs49152-jb")
-                        if st.button(f"F{f_idx}: {f_desc}", key=f"related_feature_{f_idx}"):
-                            st.session_state.feature_idx = f_idx
-                            st._set_query_params(page="Feature Explorer", feature=f_idx)
-                            st.rerun()
+        # for i, (mf_idx, _) in enumerate(sorted_meta_features):
+        #     with columns[i]:
+        #         st.write(f"**Meta Feature {mf_idx}**")
+        #         for f_idx, _ in top_features_dict[mf_idx]:
+        #             if f_idx != st.session_state.feature_idx:
+        #                 f_desc = interpreter.get_neuronpedia_explanation(f_idx, "gpt2-small", "8-res_fs49152-jb")
+        #                 if st.button(f"F{f_idx}: {f_desc}", key=f"related_feature_{f_idx}"):
+        #                     st.session_state.feature_idx = f_idx
+        #                     st._set_query_params(page="Feature Explorer", feature=f_idx)
+        #                     st.rerun()
 
     elif st.session_state.page == "Meta Feature Explorer":
         st.header("Meta Feature Explorer")
