@@ -185,9 +185,11 @@ def main():
     if st.session_state.page == "Feature Explorer":
         st.header("Feature Explorer")
         
-        feature_idx = st.number_input("Enter feature index:", min_value=0, max_value=stats.n_features-1, value=st.session_state.feature_idx)
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            feature_idx = st.number_input("Enter feature index:", min_value=0, max_value=stats.n_features-1, value=st.session_state.feature_idx)
         
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 4])
         
         with col1:
             if st.button("Explore Feature", key="explore_feature_button"):
@@ -243,9 +245,11 @@ def main():
     elif st.session_state.page == "Meta Feature Explorer":
         st.header("Meta Feature Explorer")
         
-        meta_feature_idx = st.number_input("Enter meta feature index:", min_value=0, value=st.session_state.meta_feature_idx)
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            meta_feature_idx = st.number_input("Enter meta feature index:", min_value=0, value=st.session_state.meta_feature_idx)
         
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 3])
         
         with col1:
             if st.button("Explore Meta Feature", key="explore_meta_feature_button"):
