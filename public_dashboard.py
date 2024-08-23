@@ -163,14 +163,14 @@ def format_example(example, tokenizer):
     return formatted_context
 
 def create_activation_histogram(activations, num_features):
-    fig = ff.create_distplot([activations], ['Activation'], bin_size=0.05, show_rug=False, show_curve=False)
+    fig = go.Figure(data=[go.Histogram(x=activations, nbinsx=17, name='Activation')])
     fig.update_layout(
-        title=f"Meta-Feature Activation Distribution<br>Number of features: {num_features} (activation density: {(num_features/49152):.4f})",
+        title=f"Meta-Feature Activation Distribution<br>Number of features with this meta-feature: {num_features} <br> Activation density: {(num_features/49152):.4f})",
         xaxis_title="Activation Value",
         yaxis_title="Density",
         showlegend=False,
         width=400,
-        height=350,
+        height=450,
         xaxis_range=[0.15, 1]
     )
     return fig
