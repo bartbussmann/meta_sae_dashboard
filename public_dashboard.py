@@ -165,7 +165,7 @@ def format_example(example, tokenizer):
 def create_activation_histogram(activations, num_features):
     fig = go.Figure(data=[go.Histogram(x=activations, nbinsx=17, name='Activation')])
     fig.update_layout(
-        title=f"Meta-Feature Activation Distribution<br>Number of features with this meta-feature: {num_features} <br> Activation density: {(num_features/49152):.4f})",
+        title=f"Meta-Feature Activation Distribution<br>Number of features with this meta-feature: {num_features} <br>Activation Density: {(num_features/49152):.4f}",
         xaxis_title="Activation Value",
         yaxis_title="Density",
         showlegend=False,
