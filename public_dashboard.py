@@ -11,6 +11,8 @@ from transformers import AutoTokenizer
 import requests
 import random
 import plotly.figure_factory as ff
+import urllib.parse
+import json
 
 
 # Load the tokenizer and dataset
@@ -45,6 +47,20 @@ def feature_button_callback(feature_idx):
     st.session_state.page = "Feature Explorer"
     st.session_state.feature_idx = feature_idx
 
+def create_quicklist_url(features, meta_feature_idx, meta_feature_description):
+    LIST_NAME = f"Meta Feature {meta_feature_idx}: {meta_feature_description}"
+    LIST_FEATURES = [
+        {"modelId": "gpt2-small", "layer": "8-res_fs49152-jb", "index": str(feature_idx)}
+        for feature_idx, _ in features
+    ]
+    
+    url = "https://neuronpedia.org/quick-list/"
+    name = urllib.parse.quote(LIST_NAME)
+    url = url + "?name=" + name
+    url = url + "&features=" + urllib.parse.quote(json.dumps(LIST_FEATURES))
+    url = url + "&embed=true"  # Add embed parameter
+    
+    return url
 
 def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-small", layer="8-res_fs49152-jb"):
     # Create nodes and edges
@@ -61,7 +77,9 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
     sorted_meta_features = sorted(stats.feature_to_clusters[feature_idx], key=lambda x: x[1], reverse=True)[:5]
     top_features_dict = {}
 
-    for i, (mf_idx, _) in enumerate(sorted_meta_features):
+    max_activation = max(activation for _, activation in sorted_meta_features)
+
+    for i, (mf_idx, activation) in enumerate(sorted_meta_features):
         mf_desc = interpreter.interpret_meta_feature(mf_idx)  # Use AutoInterpreter for meta-features
         mf_node = f"MF{mf_idx}"
         nodes.append(mf_node)
@@ -70,13 +88,17 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
 
         angle = 2 * np.pi * i / 5 + 1
         x, y =   0.5*np.cos(angle),  0.5*np.sin(angle)
-        edge_traces.append(go.Scatter(x=[0, x], y=[0, y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.5)', width=1), hoverinfo='none'))
+        
+        # Calculate line width based on activation strength
+        line_width = 20 * activation
+        
+        edge_traces.append(go.Scatter(x=[0, x], y=[0, y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.5)', width=line_width), hoverinfo='none'))
         mf_link = f"https://metasae.streamlit.app/?page=Meta+Feature+Explorer&meta_feature={mf_idx}"
         annotations.append(dict(x=x, y=y, xref="x", yref="y", text=f'<a href="{mf_link}" style="color: blue;">{mf_desc}</a>', showarrow=False, font=dict(size=12, color="blue")))
 
         top_features = sorted(stats.cluster_to_features[mf_idx], key=lambda x: x[1], reverse=True)[:5]
         top_features_dict[mf_idx] = top_features
-        for j, (f_idx, _) in enumerate(top_features):
+        for j, (f_idx, f_activation) in enumerate(top_features):
             if f_idx != feature_idx:
                 f_desc = interpreter.get_neuronpedia_explanation(f_idx, model_id, layer)
                 f_node = f"F{f_idx}_{i}"
@@ -86,7 +108,11 @@ def create_radial_tree_plot(feature_idx, stats, interpreter, model_id="gpt2-smal
 
                 sub_angle = angle + (j - 2) * 0.2
                 sub_x, sub_y = 1.1*(0.8 + 0.05 * j) * np.cos(sub_angle), 1.1*(0.8 + 0.05 * j) * np.sin(sub_angle)
-                edge_traces.append(go.Scatter(x=[x, sub_x], y=[y, sub_y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.3)', width=1), hoverinfo='none'))
+                
+                # Calculate line width for feature to meta-feature connection
+                sub_line_width = 5 * f_activation
+                
+                edge_traces.append(go.Scatter(x=[x, sub_x], y=[y, sub_y], mode='lines', line=dict(color='rgba(136, 136, 136, 0.3)', width=sub_line_width), hoverinfo='none'))
                 f_link = f"https://metasae.streamlit.app/?page=Feature+Explorer&feature={f_idx}"
                 annotations.append(dict(x=sub_x, y=sub_y, xref="x", yref="y", text=f'<a href="{f_link}" style="color: green;">{f_desc}</a>', showarrow=False, font=dict(size=10, color="green")))
 
@@ -226,6 +252,7 @@ def main():
                       on_click=meta_feature_button_callback, 
                       args=(meta_feature_idx,))
             
+            
         st.write("## Related Features Graph")
         with st.spinner("Generating graph..."):
             fig, sorted_meta_features, top_features_dict = create_radial_tree_plot(st.session_state.feature_idx, stats, interpreter)
@@ -296,26 +323,42 @@ def main():
             st.write("## Max activating features")
             # Initialize session state for number of features to show
             if 'num_features_to_show' not in st.session_state:
-                st.session_state.num_features_to_show = 5
+                st.session_state.num_features_to_show = 10
 
+            quicklist_url = create_quicklist_url(features[:30], st.session_state.meta_feature_idx, meta_feature_description)        
+            st.components.v1.iframe(quicklist_url, height=600, scrolling=True)
+
+
+            # Show buttons for the top 10 activating features
             for feature_idx, activation in features[:st.session_state.num_features_to_show]:
-                st.button(f"Explore Feature {feature_idx}", 
-                          key=f"feature_{feature_idx}", 
-                          on_click=feature_button_callback, 
-                          args=(feature_idx,))
+                feature_description = interpreter.get_neuronpedia_explanation(feature_idx, "gpt2-small", "8-res_fs49152-jb")
+                if st.button(f"Feature {feature_idx}: {feature_description} (Activation: {activation:.4f})", 
+                             key=f"feature_button_{feature_idx}", 
+                             on_click=feature_button_callback, 
+                             args=(feature_idx,)):
+                    st.session_state.feature_idx = feature_idx
+                    st._set_query_params(page="Feature Explorer", feature=feature_idx)
+                    st.rerun()
+
+
+            # for feature_idx, activation in features[:st.session_state.num_features_to_show]:
+            #     st.button(f"Explore Feature {feature_idx}", 
+            #               key=f"feature_{feature_idx}", 
+            #               on_click=feature_button_callback, 
+            #               args=(feature_idx,))
                 
-                # Embed Neuronpedia iframe for each feature
-                st.components.v1.iframe(
-                    f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{feature_idx}?embed=true&embedexplanation=true&embedplots=false",
-                    height=400,
-                    scrolling=True
-                )
+            #     # Embed Neuronpedia iframe for each feature
+            #     st.components.v1.iframe(
+            #         f"https://neuronpedia.org/gpt2-small/8-res_fs49152-jb/{feature_idx}?embed=true&embedexplanation=true&embedplots=false",
+            #         height=400,
+            #         scrolling=True
+            #     )
                 
-                st.markdown("", unsafe_allow_html=True)
+            #     st.markdown("", unsafe_allow_html=True)
 
             # Add "Load More" button
             if st.session_state.num_features_to_show < len(features) and st.button("Load More"):
-                st.session_state.num_features_to_show += 10
+                st.session_state.num_features_to_show += 20
                 st.rerun()
 
 if __name__ == "__main__":
